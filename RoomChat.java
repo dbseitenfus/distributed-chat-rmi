@@ -1,5 +1,3 @@
-import interfaces.IRoomChat;
-import interfaces.IUserChat;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
@@ -24,24 +22,24 @@ public class RoomChat extends UnicastRemoteObject implements IRoomChat {
   }
 
   @Override
-  public void joinRoom(String userName, IUserChat user) throws RemoteException {
+  public void joinRoom(String userName, IUserChat user) throws RemoteException{
     userList.put(userName, user);
     sendMsg("Sistema", userName + " entrou na sala.");
   }
 
   @Override
-  public void leaveRoom(String userName) throws RemoteException {
+  public void leaveRoom(String userName) throws RemoteException{
     userList.remove(userName);
     sendMsg("Sistema", userName + " saiu da sala.");
   }
 
   @Override
-  public String getRoomName() throws RemoteException {
+  public String getRoomName() throws RemoteException{
     return roomName;
   }
 
   @Override
-  public void closeRoom() throws RemoteException {
+  public void closeRoom() throws RemoteException{
     for (IUserChat user : userList.values()) {
       user.deliverMsg("Sistema", "A sala foi fechada.");
     }

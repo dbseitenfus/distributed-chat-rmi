@@ -1,5 +1,3 @@
-import interfaces.IRoomChat;
-import interfaces.IServerChat;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -15,17 +13,17 @@ public class ServerChat extends UnicastRemoteObject implements IServerChat {
   }
 
   @Override
-  public ArrayList<String> getRooms() throws RemoteException {
+  public List<String> getRooms() throws RemoteException {
     return new ArrayList<>(roomList.keySet());
   }
 
   @Override
-  public void createRoom(String roomName) throws RemoteException {
+  public synchronized void createRoom(String roomName) throws RemoteException {
     if (!roomList.containsKey(roomName)) {
       IRoomChat room = new RoomChat(roomName);
       roomList.put(roomName, room);
     } else {
-      throw new RemoteException("Room already exists");
+      throw new RemoteException("A sala já existe.");
     }
   }
 }
