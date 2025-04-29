@@ -1,6 +1,7 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JTextArea;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -22,6 +23,7 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
     this.userName = userName;
     setupGUI();
     connectToServer();
+    chooseRoom();
   }
 
   private void setupGUI() {
@@ -47,36 +49,76 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
     frame.add(panel, BorderLayout.SOUTH);
 
     sendBtn.addActionListener(e -> {
+      String msg = msgField.getText().trim();
+      if (!msg.isEmpty() && currentRoom != null) {
         try {
-            if (currentRoom != null) {
-                currentRoom.sendMsg(userName, msgField.getText());
-                msgField.setText("");
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
+          currentRoom.sendMsg(userName, msg);
+          msgField.setText("");
+        } catch (RemoteException ex) {
+          ex.printStackTrace();
+          chatArea.append("Erro ao enviar mensagem.\n");
         }
+      }
     });
 
-      joinBtn.addActionListener(e -> {
-          String roomName = JOptionPane.showInputDialog("Nome da sala:");
-          joinRoom(roomName);
-      });
+    joinBtn.addActionListener(e -> chooseRoom());
 
-      leaveBtn.addActionListener(e -> {
-          try {
-              if (currentRoom != null) {
-                  currentRoom.leaveRoom(userName);
-                  currentRoom = null;
-                  chatArea.append("Você saiu da sala.\n");
-              }
-          } catch (Exception ex) {
-              ex.printStackTrace();
-          }
-      });
+    leaveBtn.addActionListener(e -> leaveRoom());
 
-      frame.setVisible(true);
+    frame.setVisible(true);
   }
 
+  private void chooseRoom() {
+    try {
+      List<String> rooms = server.getRooms();
+
+      String[] roomOptions = new String[rooms.size() + 1];
+      roomOptions[0] = "<Criar nova sala>";
+      for (int i = 0; i < rooms.size(); i++) {
+        roomOptions[i + 1] = rooms.get(i);
+      }
+
+      String selectedOption = (String) JOptionPane.showInputDialog(
+        null,
+        "Escolha uma sala ou crie uma nova:",
+        "Salas disponíveis",
+        JOptionPane.PLAIN_MESSAGE,
+        null,
+        roomOptions,
+        roomOptions[0]
+      );
+
+      if (selectedOption == null) return;
+
+      String roomName;
+
+      if (selectedOption.equals("<Criar nova sala>")) {
+        roomName = JOptionPane.showInputDialog("Digite o nome da nova sala:");
+        if (roomName == null || roomName.trim().isEmpty()) return;
+        roomName = roomName.trim();
+
+        if (rooms.contains(roomName)) {
+          JOptionPane.showMessageDialog(null, "Já existe uma sala com esse nome.");
+          return;
+        }
+
+        server.createRoom(roomName);
+      } else {
+        roomName = selectedOption;
+      }
+
+      if (currentRoom != null) {
+        leaveRoom();
+      }
+
+      joinRoom(roomName);
+
+    } catch (RemoteException e) {
+      e.printStackTrace();
+      JOptionPane.showMessageDialog(null, "Erro ao obter salas do servidor.");
+    }
+  }
+  
   private void connectToServer() {
     try {
       Registry registry = LocateRegistry.getRegistry("localhost", 2020);
@@ -88,7 +130,6 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
 
   private void joinRoom(String roomName) {
     try {
-      server.createRoom(roomName);
       Registry registry = LocateRegistry.getRegistry("localhost", 2020);
       currentRoom = (IRoomChat) registry.lookup(roomName);
       currentRoom.joinRoom(userName, this);
@@ -98,8 +139,20 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
     }
   }
 
+  private void leaveRoom() {
+    try {
+      if (currentRoom != null) {
+        currentRoom.leaveRoom(userName);
+        chatArea.append("Saiu da sala.\n");
+        currentRoom = null;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
   @Override
   public void deliverMsg(String senderName, String msg) throws RemoteException{
-    System.out.println("[" + userName + "] " + senderName + ": " + msg);
+   chatArea.append(senderName + ": " + msg + "\n");
   }
 }

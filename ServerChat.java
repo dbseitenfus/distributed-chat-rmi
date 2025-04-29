@@ -1,5 +1,7 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,10 +22,15 @@ public class ServerChat extends UnicastRemoteObject implements IServerChat {
   @Override
   public synchronized void createRoom(String roomName) throws RemoteException {
     if (!roomList.containsKey(roomName)) {
-      IRoomChat room = new RoomChat(roomName);
-      roomList.put(roomName, room);
-    } else {
-      throw new RemoteException("A sala já existe.");
+      RoomChat room = new RoomChat(roomName); 
+      try {
+        Registry registry = LocateRegistry.getRegistry(2020);
+        registry.rebind(roomName, room);
+        roomList.put(roomName, room);
+        System.out.println("Sala criada e registrada: " + roomName);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
     }
   }
 }
