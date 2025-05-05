@@ -152,7 +152,7 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
     }
 
     @Override
-    public void deliverMsg(String senderName, String msg) throws RemoteException{
+    public void deliverMsg(String senderName, String msg) throws RemoteException {
         chatArea.append(senderName + ": " + msg + "\n");
     }
 }
