@@ -1,6 +1,5 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JTextArea;
 import javax.swing.JButton;
@@ -18,6 +17,9 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
     private IRoomChat currentRoom;
     private IServerChat server;
     private JTextArea chatArea;
+
+    String ip = "10.1.1.91";
+    int port = 2020;
 
     public UserChat(String userName) throws RemoteException {
         this.userName = userName;
@@ -49,16 +51,8 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
         frame.add(panel, BorderLayout.SOUTH);
 
         sendBtn.addActionListener(e -> {
-            String msg = msgField.getText().trim();
-            if (!msg.isEmpty() && currentRoom != null) {
-                try {
-                    currentRoom.sendMsg(userName, msg);
-                    msgField.setText("");
-                } catch (RemoteException ex) {
-                    ex.printStackTrace();
-                    chatArea.append("Erro ao enviar mensagem.\n");
-                }
-            }
+           sendMessage(msgField.getText());
+            msgField.setText("");
         });
 
         joinBtn.addActionListener(e -> chooseRoom());
@@ -68,60 +62,62 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
         frame.setVisible(true);
     }
 
-    private void chooseRoom() {
-        try {
-            List<String> rooms = server.getRooms();
+    private void sendMessage(String msg)  {
+        if (!msg.isEmpty() && currentRoom != null) {
+            currentRoom.sendMsg(userName, msg);
 
-            String[] roomOptions = new String[rooms.size() + 1];
-            roomOptions[0] = "<Criar nova sala>";
-            for (int i = 0; i < rooms.size(); i++) {
-                roomOptions[i + 1] = rooms.get(i);
-            }
-
-            String selectedOption = (String) JOptionPane.showInputDialog(
-                    null,
-                    "Escolha uma sala ou crie uma nova:",
-                    "Salas disponíveis",
-                    JOptionPane.PLAIN_MESSAGE,
-                    null,
-                    roomOptions,
-                    roomOptions[0]
-            );
-
-            if (selectedOption == null) return;
-
-            String roomName;
-
-            if (selectedOption.equals("<Criar nova sala>")) {
-                roomName = JOptionPane.showInputDialog("Digite o nome da nova sala:");
-                if (roomName == null || roomName.trim().isEmpty()) return;
-                roomName = roomName.trim();
-
-                if (rooms.contains(roomName)) {
-                    JOptionPane.showMessageDialog(null, "Já existe uma sala com esse nome.");
-                    return;
-                }
-
-                server.createRoom(roomName);
-            } else {
-                roomName = selectedOption;
-            }
-
-            if (currentRoom != null) {
-                leaveRoom();
-            }
-
-            joinRoom(roomName);
-
-        } catch (RemoteException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Erro ao obter salas do servidor.");
         }
+    }
+
+    private void chooseRoom() {
+        List<String> rooms = server.getRooms();
+
+        String[] roomOptions = new String[rooms.size() + 1];
+        roomOptions[0] = "<Criar nova sala>";
+        for (int i = 0; i < rooms.size(); i++) {
+            roomOptions[i + 1] = rooms.get(i);
+        }
+
+        String selectedOption = (String) JOptionPane.showInputDialog(
+                null,
+                "Escolha uma sala ou crie uma nova:",
+                "Salas disponíveis",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                roomOptions,
+                roomOptions[0]
+        );
+
+        if (selectedOption == null) return;
+
+        String roomName;
+
+        if (selectedOption.equals("<Criar nova sala>")) {
+            roomName = JOptionPane.showInputDialog("Digite o nome da nova sala:");
+            if (roomName == null || roomName.trim().isEmpty()) return;
+            roomName = roomName.trim();
+
+            if (rooms.contains(roomName)) {
+                JOptionPane.showMessageDialog(null, "Já existe uma sala com esse nome.");
+                return;
+            }
+
+            server.createRoom(roomName);
+        } else {
+            roomName = selectedOption;
+        }
+
+        if (currentRoom != null) {
+            leaveRoom();
+        }
+
+        joinRoom(roomName);
+
     }
 
     private void connectToServer() {
         try {
-            Registry registry = LocateRegistry.getRegistry("localhost", 2020);
+            Registry registry = LocateRegistry.getRegistry(ip, port);
             server = (IServerChat) registry.lookup("Servidor");
         } catch (Exception e) {
             e.printStackTrace();
@@ -130,7 +126,7 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
 
     private void joinRoom(String roomName) {
         try {
-            Registry registry = LocateRegistry.getRegistry("localhost", 2020);
+            Registry registry = LocateRegistry.getRegistry(ip, port);
             currentRoom = (IRoomChat) registry.lookup(roomName);
             currentRoom.joinRoom(userName, this);
             chatArea.append("Entrou na sala: " + roomName + "\n");
@@ -152,7 +148,7 @@ public class UserChat extends UnicastRemoteObject implements IUserChat {
     }
 
     @Override
-    public void deliverMsg(String senderName, String msg) throws RemoteException {
+    public void deliverMsg(String senderName, String msg){
         chatArea.append(senderName + ": " + msg + "\n");
     }
 }

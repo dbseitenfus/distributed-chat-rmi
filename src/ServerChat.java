@@ -2,9 +2,9 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,7 +60,7 @@ public class ServerChat extends UnicastRemoteObject implements IServerChat {
             if (room != null) {
                 room.closeRoom();
                 roomList.remove(roomName);
-                Registry registry = LocateRegistry.getRegistry(2020);
+                Registry registry = LocateRegistry.getRegistry("192.168.0.105", 2020);
                 registry.unbind(roomName);
                 System.out.println("Sala fechada via RMI: " + roomName);
             }
@@ -78,16 +78,16 @@ public class ServerChat extends UnicastRemoteObject implements IServerChat {
     }
 
     @Override
-    public List<String> getRooms() throws RemoteException {
+    public ArrayList<String> getRooms() {
         return new ArrayList<>(roomList.keySet());
     }
 
     @Override
-    public synchronized void createRoom(String roomName) throws RemoteException {
+    public synchronized void createRoom(String roomName)  {
         if (!roomList.containsKey(roomName)) {
-            RoomChat room = new RoomChat(roomName);
             try {
-                Registry registry = LocateRegistry.getRegistry(2020);
+                RoomChat room = new RoomChat(roomName);
+                Registry registry = LocateRegistry.getRegistry("192.168.0.105", 2020);
                 registry.rebind(roomName, room);
                 roomList.put(roomName, room);
                 System.out.println("Sala criada e registrada: " + roomName);
